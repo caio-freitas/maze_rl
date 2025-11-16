@@ -56,7 +56,6 @@ class SARSAAgent(Agent):
             self.epsilon *= 0.999
             # return random tuple of actions
             return np.random.randint(0, 10, size=2)
-        state = state
         state = np.digitize(state, self.discrete_obs_space)
         # get coordinates of index of maximum value in the q tensor
         max_action = np.unravel_index(np.argmax(self.q[state[0]][state[1]]), self.q[state[0]][state[1]].shape)
