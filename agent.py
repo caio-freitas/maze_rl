@@ -35,26 +35,27 @@ class SARSAAgent(Agent):
         print("Action space:", env.action_space)
         self.discrete_obs_space = np.linspace(-5, 5, 10)
         self.discrete_act_space = np.linspace(env.action_space.low, env.action_space.high, 10)
-        self.q = np.zeros((10, 10, 10, 10))
+        self.q = np.zeros((10, 10, 10, 10, 10, 10))
         print("Q shape:", self.q.shape)
         self.action = self.pick_action(self.state)
 
     def update_q(self, state, action, reward, next_state, next_action):
-        state = state[0]["observation"][:2]
+        state = state[:2]
+        print("state:", state)
         state = np.digitize(state, self.discrete_obs_space)
-        next_state = next_state[0]["observation"][:2]
+        next_state = next_state[:2]
         
         next_state = np.digitize(next_state, self.discrete_obs_space)
         print(f"state: {state}, action: {action}, reward: {reward}, next_state: {next_state}, next_action: {next_action}")
-        print(self.q[state[0]][state[1]][action[0]][action[1]])
-        self.q[state[0]][state[1]][action[0]][action[1]] = self.q[state[0]][state[1]][action[0]][action[1]] + self.alpha * (reward + self.gamma * self.q[next_state[0]][next_state[1]][next_action[0]][next_action[1]] - self.q[state[0]][state[1]][action[0]][action[1]])
+        print(tuple(np.concatenate((state, action))))
+        print(self.q[tuple(np.concatenate((state, action)))])
+        self.q[tuple(np.concatenate((state, action)))] = self.q[tuple(np.concatenate((state, action)))] + self.alpha * (reward + self.gamma * self.q[tuple(np.concatenate((next_state, next_action)))] - self.q[tuple(np.concatenate((state, action)))])
 
     def pick_action(self, state, update_q=False):
         if np.random.random() < self.epsilon and not update_q:
             self.epsilon *= 0.999
             # return random tuple of actions
             return np.random.randint(0, 10, size=2)
-        state = state[0]["observation"][:2]
         state = np.digitize(state, self.discrete_obs_space)
         # get coordinates of index of maximum value in the q tensor
         max_action = np.unravel_index(np.argmax(self.q[state[0]][state[1]]), self.q[state[0]][state[1]].shape)
@@ -72,6 +73,7 @@ class SARSAAgent(Agent):
         next_state, reward, done, _ = self.env.step(self.action)
         self.action = self.pick_action(next_state)
         self.update_q(self.state, prev_action, reward, next_state, self.action)
+        self.state = next_state
         self.total_reward += reward
         if done:
             self.reset()
@@ -82,3 +84,12 @@ class SARSAAgent(Agent):
 
     def load(self, filename):
         self.q = np.load(filename)
+
+    def reset(self):
+        self.state = self.env.reset()
+        self.total_reward = 0.0
+
+
+class PolicyGradientAgent(Agent):
+    def __init__(self, env):
+        super().__init__(env)
