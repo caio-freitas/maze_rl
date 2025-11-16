@@ -11,20 +11,23 @@ class PointMazeWrapper(gym.Wrapper):
         self.action_space = gym.spaces.Box(low=-1, high=1, shape=(2,))
         self.reward_range = (-np.inf, np.inf)
         self.metadata = {'render.modes': ['human', 'rgb_array']}
-        obs = self.reset()
-        self.goal = obs[0]["desired_goal"]
-
-    def step(self, action):
-        obs = self.env.step(action)
-        self.goal = obs[0]["desired_goal"]
-        # print(obs)
-        done = obs[4]["success"]
-        reward = self._reward(obs, action)
+        self.total_obs = self.reset()
         
-        return obs, reward, done, {}
+    def step(self, action):
+        self.total_obs = self.env.step(action)
+        self.goal = self.total_obs[0]["desired_goal"]
+        self.obs = np.append(self.total_obs[0]["observation"][:2], self.total_obs[0]["desired_goal"])
+        # print(obs)
+        done = self.total_obs[4]["success"]
+        reward = self._reward(self.obs, action)
+        
+        return self.obs, reward, done, {}
     def reset(self):
-        return self.env.reset()
+        self.total_obs = self.env.reset()
+        self.goal = self.total_obs[0]["desired_goal"]
+        self.obs = np.append(self.total_obs[0]["observation"][:2], self.total_obs[0]["desired_goal"])
+        return self.obs
 
     def _reward(self, obs, action):
-        reward = -np.linalg.norm(obs[0]["observation"][:2] - self.goal) - 0.1 * np.linalg.norm(action)
+        reward = -np.linalg.norm(obs[:2] - self.goal) - 0.1 * np.linalg.norm(action)
         return reward
